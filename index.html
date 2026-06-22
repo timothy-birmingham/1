@@ -12,8 +12,19 @@
   <!-- New Hire Form -->
   <div class="card">
     <h2>Add New Hire</h2>
+    
     <input id="name" placeholder="Name" />
-    <input id="role" placeholder="Role" />
+
+    <select id="role" onchange="populateEquipment()">
+      <option value="">Select Role</option>
+      <option value="CAM">CAM</option>
+      <option value="Accountant">Accountant</option>
+    </select>
+
+    <input id="startDate" type="date" />
+
+    <textarea id="notes" placeholder="Notes"></textarea>
+
     <button onclick="addHire()">Add Hire</button>
   </div>
 
@@ -21,7 +32,9 @@
   <div class="card">
     <h2>Request Equipment</h2>
     <select id="hireSelect"></select>
-    <input id="equipment" placeholder="Equipment (Laptop, Monitor...)" />
+
+    <select id="equipmentList"></select>
+
     <select id="status">
       <option>Not Reviewed</option>
       <option>Approved</option>
@@ -29,6 +42,7 @@
       <option>Received</option>
       <option>Assigned</option>
     </select>
+
     <button onclick="addRequest()">Add Request</button>
   </div>
 
@@ -56,21 +70,75 @@
     let hires = [];
     let requests = [];
 
+    // Role-based templates
+    const equipmentTemplates = {
+      "CAM": [
+        "Monitor",
+        "Monitor",
+        "Laptop",
+        "Docking Station",
+        "Keyboard + Mouse Combo"
+      ],
+      "Accountant": [
+        "Monitor",
+        "Monitor",
+        "Laptop (with 10-key)",
+        "Docking Station",
+        "Keyboard + Mouse Combo"
+      ]
+    };
+
+    function populateEquipment() {
+      const role = document.getElementById("role").value;
+      const equipmentList = document.getElementById("equipmentList");
+
+      equipmentList.innerHTML = "";
+
+      if (!equipmentTemplates[role]) return;
+
+      equipmentTemplates[role].forEach(item => {
+        const option = document.createElement("option");
+        option.textContent = item;
+        option.value = item;
+        equipmentList.appendChild(option);
+      });
+    }
+
     function addHire() {
       const name = document.getElementById("name").value;
       const role = document.getElementById("role").value;
+      const startDate = document.getElementById("startDate").value;
+      const notes = document.getElementById("notes").value;
 
-      if (!name || !role) return alert("Enter all fields");
+      if (!name || !role) return alert("Please fill required fields");
 
-      const hire = { id: Date.now(), name, role };
+      const hire = {
+        id: Date.now(),
+        name,
+        role,
+        startDate,
+        notes
+      };
+
       hires.push(hire);
+
+      // Auto-create equipment requests
+      if (equipmentTemplates[role]) {
+        equipmentTemplates[role].forEach(item => {
+          requests.push({
+            hireName: name,
+            equipment: item,
+            status: "Not Reviewed"
+          });
+        });
+      }
 
       updateUI();
     }
 
     function addRequest() {
       const hireId = document.getElementById("hireSelect").value;
-      const equipment = document.getElementById("equipment").value;
+      const equipment = document.getElementById("equipmentList").value;
       const status = document.getElementById("status").value;
 
       if (!hireId || !equipment) return alert("Fill all fields");
@@ -87,7 +155,6 @@
     }
 
     function updateUI() {
-      // Update hire list
       const hireList = document.getElementById("hireList");
       const hireSelect = document.getElementById("hireSelect");
 
@@ -96,7 +163,11 @@
 
       hires.forEach(h => {
         const li = document.createElement("li");
-        li.textContent = `${h.name} (${h.role})`;
+        li.innerHTML = `
+          <strong>${h.name}</strong> (${h.role})<br>
+          Start: ${h.startDate || "N/A"}<br>
+          Notes: ${h.notes || "None"}
+        `;
         hireList.appendChild(li);
 
         const option = document.createElement("option");
@@ -105,7 +176,6 @@
         hireSelect.appendChild(option);
       });
 
-      // Update requests table
       const table = document.getElementById("requestTable");
       table.innerHTML = "";
 
