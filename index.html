@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Equipment Tracking System</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <h1>Onboarding Equipment Tracker</h1>
+
+  <!-- New Hire Form -->
+  <div class="card">
+    <h2>Add New Hire</h2>
+    <input id="name" placeholder="Name" />
+    <input id="role" placeholder="Role" />
+    <button onclick="addHire()">Add Hire</button>
+  </div>
+
+  <!-- Equipment Request Form -->
+  <div class="card">
+    <h2>Request Equipment</h2>
+    <select id="hireSelect"></select>
+    <input id="equipment" placeholder="Equipment (Laptop, Monitor...)" />
+    <select id="status">
+      <option>Not Reviewed</option>
+      <option>Approved</option>
+      <option>Ordered</option>
+      <option>Received</option>
+      <option>Assigned</option>
+    </select>
+    <button onclick="addRequest()">Add Request</button>
+  </div>
+
+  <!-- Data Tables -->
+  <div class="card">
+    <h2>New Hires</h2>
+    <ul id="hireList"></ul>
+  </div>
+
+  <div class="card">
+    <h2>Equipment Requests</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Hire</th>
+          <th>Equipment</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="requestTable"></tbody>
+    </table>
+  </div>
+
+  <script>
+    let hires = [];
+    let requests = [];
+
+    function addHire() {
+      const name = document.getElementById("name").value;
+      const role = document.getElementById("role").value;
+
+      if (!name || !role) return alert("Enter all fields");
+
+      const hire = { id: Date.now(), name, role };
+      hires.push(hire);
+
+      updateUI();
+    }
+
+    function addRequest() {
+      const hireId = document.getElementById("hireSelect").value;
+      const equipment = document.getElementById("equipment").value;
+      const status = document.getElementById("status").value;
+
+      if (!hireId || !equipment) return alert("Fill all fields");
+
+      const hire = hires.find(h => h.id == hireId);
+
+      requests.push({
+        hireName: hire.name,
+        equipment,
+        status
+      });
+
+      updateUI();
+    }
+
+    function updateUI() {
+      // Update hire list
+      const hireList = document.getElementById("hireList");
+      const hireSelect = document.getElementById("hireSelect");
+
+      hireList.innerHTML = "";
+      hireSelect.innerHTML = "";
+
+      hires.forEach(h => {
+        const li = document.createElement("li");
+        li.textContent = `${h.name} (${h.role})`;
+        hireList.appendChild(li);
+
+        const option = document.createElement("option");
+        option.value = h.id;
+        option.textContent = h.name;
+        hireSelect.appendChild(option);
+      });
+
+      // Update requests table
+      const table = document.getElementById("requestTable");
+      table.innerHTML = "";
+
+      requests.forEach(r => {
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+          <td>${r.hireName}</td>
+          <td>${r.equipment}</td>
+          <td>
+            <select onchange="updateStatus(this, '${r.hireName}', '${r.equipment}')">
+              ${["Not Reviewed","Approved","Ordered","Received","Assigned"].map(s =>
+                `<option ${r.status === s ? "selected" : ""}>${s}</option>`
+              ).join("")}
+            </select>
+          </td>
+        `;
+
+        table.appendChild(row);
+      });
+    }
+
+    function updateStatus(select, hireName, equipment) {
+      const req = requests.find(r =>
+        r.hireName === hireName && r.equipment === equipment
+      );
+      req.status = select.value;
+    }
+  </script>
+
+</body>
+</html>
