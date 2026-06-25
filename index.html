@@ -7,204 +7,204 @@
 </head>
 <body>
 
-  <h1>Onboarding Equipment Tracker</h1>
+<h1>Onboarding Equipment Tracker</h1>
 
-  <!-- New Hire Form -->
-  <div class="card">
-    <h2>Add New Hire</h2>
-    
-    <input id="name" placeholder="Name" />
+<div class="card">
+  <h2>Add New Hire</h2>
 
-    <select id="role" onchange="populateEquipment()">
-      <option value="">Select Role</option>
-      <option value="CAM">CAM</option>
-      <option value="Accountant">Accountant</option>
-    </select>
+  <input id="name" placeholder="Name" />
 
-    <input id="startDate" type="date" />
+  <select id="role">
+    <option value="">Select Role</option>
+    <option value="CAM">CAM</option>
+    <option value="Accountant">Accountant</option>
+  </select>
 
-    <textarea id="notes" placeholder="Notes"></textarea>
+  <input id="startDate" type="date" />
+  <textarea id="notes" placeholder="Notes"></textarea>
 
-    <button onclick="addHire()">Add Hire</button>
-  </div>
+  <button onclick="addHire()">Add Hire</button>
+</div>
 
-  <!-- Equipment Request Form -->
-  <div class="card">
-    <h2>Request Equipment</h2>
-    <select id="hireSelect"></select>
+<div class="card">
+  <h2>Add Equipment Request (Existing Hire)</h2>
 
-    <select id="equipmentList"></select>
+  <select id="hireSelect"></select>
 
-    <select id="status">
-      <option>Not Reviewed</option>
-      <option>Approved</option>
-      <option>Ordered</option>
-      <option>Received</option>
-      <option>Assigned</option>
-    </select>
+  <input id="equipment" placeholder="Equipment name" />
 
-    <button onclick="addRequest()">Add Request</button>
-  </div>
+  <select id="status">
+    <option>Not Reviewed</option>
+    <option>Approved</option>
+    <option>Ordered</option>
+    <option>Received</option>
+    <option>Assigned</option>
+  </select>
 
-  <!-- Data Tables -->
-  <div class="card">
-    <h2>New Hires</h2>
-    <ul id="hireList"></ul>
-  </div>
+  <button onclick="addRequest()">Add Request</button>
+</div>
 
-  <div class="card">
-    <h2>Equipment Requests</h2>
-    <table>
-      <thead>
+<div class="card">
+  <h2>New Hires</h2>
+  <ul id="hireList"></ul>
+</div>
+
+<div class="card">
+  <h2>Orders</h2>
+  <div id="ordersContainer"></div>
+</div>
+
+<script>
+let hires = [];
+let orders = [];
+
+// Equipment templates
+const equipmentTemplates = {
+  "CAM": [
+    "Monitor",
+    "Monitor",
+    "Laptop",
+    "Docking Station",
+    "Keyboard + Mouse Combo"
+  ],
+  "Accountant": [
+    "Monitor",
+    "Monitor",
+    "Laptop (10-key)",
+    "Docking Station",
+    "Keyboard + Mouse Combo"
+  ]
+};
+
+// Add New Hire + Create Order
+function addHire() {
+  const name = document.getElementById("name").value;
+  const role = document.getElementById("role").value;
+  const startDate = document.getElementById("startDate").value;
+  const notes = document.getElementById("notes").value;
+
+  if (!name || !role) return alert("Fill required fields");
+
+  const hire = {
+    id: Date.now(),
+    name,
+    role,
+    startDate,
+    notes
+  };
+
+  hires.push(hire);
+
+  // Create Order
+  const orderId = Date.now();
+
+  const newOrder = {
+    orderId,
+    hireName: name,
+    items: []
+  };
+
+  // Auto-populate equipment
+  equipmentTemplates[role].forEach(item => {
+    newOrder.items.push({
+      equipment: item,
+      status: "Not Reviewed"
+    });
+  });
+
+  orders.push(newOrder);
+
+  updateUI();
+}
+
+// Add request to EXISTING hire/order
+function addRequest() {
+  const hireId = document.getElementById("hireSelect").value;
+  const equipment = document.getElementById("equipment").value;
+  const status = document.getElementById("status").value;
+
+  if (!hireId || !equipment) return alert("Fill all fields");
+
+  const hire = hires.find(h => h.id == hireId);
+  const order = orders.find(o => o.hireName === hire.name);
+
+  order.items.push({
+    equipment,
+    status
+  });
+
+  updateUI();
+}
+
+// UI rendering
+function updateUI() {
+  const hireList = document.getElementById("hireList");
+  const hireSelect = document.getElementById("hireSelect");
+  const ordersContainer = document.getElementById("ordersContainer");
+
+  hireList.innerHTML = "";
+  hireSelect.innerHTML = "";
+  ordersContainer.innerHTML = "";
+
+  hires.forEach(h => {
+    // Hire list
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <strong>${h.name}</strong> (${h.role})<br>
+      Start: ${h.startDate || "N/A"}<br>
+      Notes: ${h.notes || "None"}
+    `;
+    hireList.appendChild(li);
+
+    // Dropdown
+    const option = document.createElement("option");
+    option.value = h.id;
+    option.textContent = h.name;
+    hireSelect.appendChild(option);
+  });
+
+  // Render grouped orders
+  orders.forEach(order => {
+    const div = document.createElement("div");
+    div.className = "order";
+
+    let itemsHTML = "";
+
+    order.items.forEach(item => {
+      itemsHTML += `
         <tr>
-          <th>Hire</th>
-          <th>Equipment</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="requestTable"></tbody>
-    </table>
-  </div>
-
-  <script>
-    let hires = [];
-    let requests = [];
-
-    // Role-based templates
-    const equipmentTemplates = {
-      "CAM": [
-        "Monitor",
-        "Monitor",
-        "Laptop",
-        "Docking Station",
-        "Keyboard + Mouse Combo"
-      ],
-      "Accountant": [
-        "Monitor",
-        "Monitor",
-        "Laptop (with 10-key)",
-        "Docking Station",
-        "Keyboard + Mouse Combo"
-      ]
-    };
-
-    function populateEquipment() {
-      const role = document.getElementById("role").value;
-      const equipmentList = document.getElementById("equipmentList");
-
-      equipmentList.innerHTML = "";
-
-      if (!equipmentTemplates[role]) return;
-
-      equipmentTemplates[role].forEach(item => {
-        const option = document.createElement("option");
-        option.textContent = item;
-        option.value = item;
-        equipmentList.appendChild(option);
-      });
-    }
-
-    function addHire() {
-      const name = document.getElementById("name").value;
-      const role = document.getElementById("role").value;
-      const startDate = document.getElementById("startDate").value;
-      const notes = document.getElementById("notes").value;
-
-      if (!name || !role) return alert("Please fill required fields");
-
-      const hire = {
-        id: Date.now(),
-        name,
-        role,
-        startDate,
-        notes
-      };
-
-      hires.push(hire);
-
-      // Auto-create equipment requests
-      if (equipmentTemplates[role]) {
-        equipmentTemplates[role].forEach(item => {
-          requests.push({
-            hireName: name,
-            equipment: item,
-            status: "Not Reviewed"
-          });
-        });
-      }
-
-      updateUI();
-    }
-
-    function addRequest() {
-      const hireId = document.getElementById("hireSelect").value;
-      const equipment = document.getElementById("equipmentList").value;
-      const status = document.getElementById("status").value;
-
-      if (!hireId || !equipment) return alert("Fill all fields");
-
-      const hire = hires.find(h => h.id == hireId);
-
-      requests.push({
-        hireName: hire.name,
-        equipment,
-        status
-      });
-
-      updateUI();
-    }
-
-    function updateUI() {
-      const hireList = document.getElementById("hireList");
-      const hireSelect = document.getElementById("hireSelect");
-
-      hireList.innerHTML = "";
-      hireSelect.innerHTML = "";
-
-      hires.forEach(h => {
-        const li = document.createElement("li");
-        li.innerHTML = `
-          <strong>${h.name}</strong> (${h.role})<br>
-          Start: ${h.startDate || "N/A"}<br>
-          Notes: ${h.notes || "None"}
-        `;
-        hireList.appendChild(li);
-
-        const option = document.createElement("option");
-        option.value = h.id;
-        option.textContent = h.name;
-        hireSelect.appendChild(option);
-      });
-
-      const table = document.getElementById("requestTable");
-      table.innerHTML = "";
-
-      requests.forEach(r => {
-        const row = document.createElement("tr");
-
-        row.innerHTML = `
-          <td>${r.hireName}</td>
-          <td>${r.equipment}</td>
+          <td>${item.equipment}</td>
           <td>
-            <select onchange="updateStatus(this, '${r.hireName}', '${r.equipment}')">
+            <select onchange="updateStatus(${order.orderId}, '${item.equipment}', this)">
               ${["Not Reviewed","Approved","Ordered","Received","Assigned"].map(s =>
-                `<option ${r.status === s ? "selected" : ""}>${s}</option>`
+                `<option ${item.status === s ? "selected" : ""}>${s}</option>`
               ).join("")}
             </select>
           </td>
-        `;
+        </tr>
+      `;
+    });
 
-        table.appendChild(row);
-      });
-    }
+    div.innerHTML = `
+      <h3>Order #${order.orderId} - ${order.hireName}</h3>
+      <table>
+        <tr><th>Equipment</th><th>Status</th></tr>
+        ${itemsHTML}
+      </table>
+    `;
 
-    function updateStatus(select, hireName, equipment) {
-      const req = requests.find(r =>
-        r.hireName === hireName && r.equipment === equipment
-      );
-      req.status = select.value;
-    }
-  </script>
+    ordersContainer.appendChild(div);
+  });
+}
+
+// Update item status
+function updateStatus(orderId, equipment, select) {
+  const order = orders.find(o => o.orderId === orderId);
+  const item = order.items.find(i => i.equipment === equipment);
+
+  item.status = select.value;
+}
+</script>
 
 </body>
 </html>
