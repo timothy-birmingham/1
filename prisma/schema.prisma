@@ -1,0 +1,153 @@
+// Prisma schema for the Vesta IT Equipment Ordering application.
+//
+// Provider is SQLite for local development and testing (zero setup, file-based).
+// To move to Postgres for a shared/production deployment, change `provider`
+// below to "postgresql" and point DATABASE_URL at a Postgres connection
+// string -- no other code changes are required, since all queries go through
+// Prisma's generated client.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  HR
+  MANAGER
+  IT
+}
+
+enum RequestStatus {
+  UNTOUCHED
+  ORDER_SUBMITTED
+  IN_TRANSIT
+  DELIVERED
+}
+
+enum ActivityType {
+  CREATED
+  STATUS_CHANGED
+  DETAILS_UPDATED
+  EQUIPMENT_UPDATED
+  NOTES_UPDATED
+}
+
+/// A person who can act within the app. Authentication is simulated today
+/// (see lib/auth) via an "acting as" switcher; this model is shaped so a
+/// future Entra ID login can map directly onto it (email as the join key).
+model User {
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  role       UserRole
+  department String
+  office     String
+  createdAt  DateTime @default(now())
+
+  requestsCreated EquipmentRequest[] @relation("RequestCreatedBy")
+  activities      RequestActivity[]  @relation("ActivityActor")
+}
+
+/// A single equipment request, from creation through delivery.
+model EquipmentRequest {
+  /// Autoincrement primary key. The human-readable REQ-000001 display id is
+  /// derived from this at read time (see lib/format.ts) rather than stored,
+  /// so it can never drift out of sync.
+  id Int @id @default(autoincrement())
+
+  employeeName   String
+  roleTitle      String
+  department     String
+  officeLocation String
+  neededByDate   DateTime
+  isNewHire      Boolean       @default(false)
+  startDate      DateTime?
+  status         RequestStatus @default(UNTOUCHED)
+  notes          String        @default("")
+
+  createdByUserId String
+  createdBy       User   @relation("RequestCreatedBy", fields: [createdByUserId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  equipmentItems RequestEquipmentItem[]
+  activities     RequestActivity[]
+
+  @@index([status])
+  @@index([department])
+  @@index([officeLocation])
+  @@index([roleTitle])
+}
+
+/// One line item on a request's equipment list. Freeform `name` (rather than
+/// a hard FK to EquipmentCatalogItem) so a request keeps its original
+/// wording even if the catalog entry is later renamed or deactivated.
+model RequestEquipmentItem {
+  id         String @id @default(cuid())
+  name       String
+  quantity   Int    @default(1)
+  requestId  Int
+  request    EquipmentRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+}
+
+/// Unified audit log for a request: creation, status transitions, and edits.
+/// Powers the timeline, status history, and request history sections of the
+/// detail view from one table instead of three overlapping ones.
+model RequestActivity {
+  id         String       @id @default(cuid())
+  type       ActivityType
+  fromStatus RequestStatus?
+  toStatus   RequestStatus?
+  note       String?
+
+  requestId Int
+  request   EquipmentRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  actorUserId String
+  actor       User   @relation("ActivityActor", fields: [actorUserId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([requestId])
+}
+
+/// The master equipment inventory list used by the existing-employee
+/// equipment picker. Managed by IT in Settings.
+model EquipmentCatalogItem {
+  id       String  @id @default(cuid())
+  name     String  @unique
+  category String?
+  active   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// A recommended equipment package for a new-hire role (e.g. "Software
+/// Engineer"). Selecting the role in the New Request form pre-populates the
+/// equipment list from here; the list stays fully editable afterward.
+model RolePackage {
+  id       String @id @default(cuid())
+  roleName String @unique
+
+  items     RolePackageItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RolePackageItem {
+  id            String @id @default(cuid())
+  name          String
+  quantity      Int    @default(1)
+  rolePackageId String
+  rolePackage   RolePackage @relation(fields: [rolePackageId], references: [id], onDelete: Cascade)
+
+  @@index([rolePackageId])
+}

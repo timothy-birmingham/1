@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git clone *)",
+      "Bash(cd /Users/tim/Dev/1-template-check && ls -la && echo \"---\" && find . -path ./.git -prune -o -type f -print | grep -v node_modules | sort)",
+      "Bash(rm -rf /Users/tim/Dev/1-template-check)",
+      "Bash(curl -s \"https://api.github.com/repos/timothy-birmingham/1\")",
+      "Bash(curl -s \"https://api.github.com/repos/timothy-birmingham/1/contents/data\")"
+    ]
+  }
+}
