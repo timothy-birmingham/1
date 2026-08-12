@@ -25,6 +25,9 @@
 ._*
 *.pem
 
+# Claude Code local settings (personal permissions/paths, not shared)
+.claude/settings.local.json
+
 # debug
 npm-debug.log*
 yarn-debug.log*
