@@ -1,0 +1,26 @@
+services:
+  app:
+    image: vesta-it-equipment-prod
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - sqlite_data_prod:/app/data
+
+    env_file:
+      - path: .env
+        required: false
+
+    environment:
+      # Always matches the sqlite_data_prod volume mount above, regardless
+      # of whatever DATABASE_URL (if any) is set in .env.
+      DATABASE_URL: file:/app/data/dev.db
+
+    restart: unless-stopped
+
+volumes:
+  sqlite_data_prod:

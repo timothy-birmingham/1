@@ -19,12 +19,13 @@ const allowedFrameAncestors = (process.env.ALLOWED_FRAME_ANCESTORS || "")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-module.exports = {
-  allowedDevOrigins: ['10.100.162.48'],
-}
-
 const nextConfig: NextConfig = {
   basePath,
+
+  // Allows LAN devices to load dev-mode JS chunks/data requests (Next
+  // blocks cross-origin access to these by default as a DNS-rebinding
+  // protection). Update this if the host machine's LAN IP changes.
+  allowedDevOrigins: ["10.100.160.63"],
 
   async headers() {
     if (allowedFrameAncestors.length === 0) return [];

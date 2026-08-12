@@ -1,0 +1,18 @@
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY . .
+
+# Prisma config validates DATABASE_URL is set even for `generate` (no DB
+# connection made); the real value is supplied at container runtime via
+# docker-compose's `environment:` (see docker-compose.yml).
+ENV DATABASE_URL="file:./build-placeholder.db"
+
+RUN npm ci
+
+RUN npx prisma generate
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev"]

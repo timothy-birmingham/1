@@ -74,7 +74,7 @@ npm run dev
 
 Open http://localhost:3000. The sidebar's **Acting as** switcher lets you
 try the app as different roles (HR, Manager, IT) without a real login --
-see [Authentication](#6-authentication-today-vs-future) below.
+see [Authentication](#7-authentication-today-vs-future) below.
 
 Other useful scripts:
 
@@ -108,7 +108,34 @@ To validate a change end-to-end before deploying:
 There's no seam requiring SharePoint itself for local testing -- the app
 runs standalone. See the next section for the actual embedding step.
 
-## 5. Build & deploy
+## 5. Running with Docker
+
+No local Node.js install required -- just Docker.
+
+**Development** (hot-reload, source bind-mounted from the host):
+
+```bash
+docker compose up
+```
+
+Open http://localhost:3000. First run applies migrations and seeds demo
+data into a named volume (`sqlite_data`); subsequent runs only apply any
+new migrations, so your data persists across restarts. To wipe and start
+over: `docker compose down -v`.
+
+**Production** (self-contained image, `next build` + `next start`, no bind
+mounts):
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Same first-run-seeds / later-runs-preserve behavior, using its own volume
+(`sqlite_data_prod`) so dev and prod data never mix. Set `DATABASE_URL` in
+`.env` to a Postgres connection string instead (see [Database schema](#2-database-schema))
+for a real shared deployment.
+
+## 6. Build & deploy
 
 ```bash
 npm run build   # produces a standard Next.js Node server build
@@ -119,9 +146,8 @@ This needs a Node.js host (not a static file host), because the app has a
 real backend (API routes + Prisma/SQLite-or-Postgres) -- a pure static
 export isn't viable here without losing that functionality. Deploy it like
 any other Next.js app: an internal VM/App Service with a process manager
-(pm2/systemd), a container (`Dockerfile` not included but a standard
-`node:20-slim` + `npm ci && npm run build && npm run start` image works),
-or a platform like Azure App Service / Vercel if your org allows it.
+(pm2/systemd), the included `Dockerfile` (see [Running with Docker](#5-running-with-docker)
+above), or a platform like Azure App Service / Vercel if your org allows it.
 
 For a production database, switch to Postgres (see [Database schema](#2-database-schema))
 rather than shipping SQLite to a shared environment.
@@ -143,7 +169,7 @@ already a self-contained page.
    `APP_BASE_PATH` and `NEXT_PUBLIC_APP_BASE_PATH` to that subpath (see
    `.env.example`) so Next.js's routing and asset URLs line up.
 
-## 6. Authentication: today vs. future
+## 7. Authentication: today vs. future
 
 There's no real login yet. The sidebar's "Acting as" switcher sets a cookie
 naming a `User` row; every API route resolves the current user through
@@ -155,7 +181,7 @@ implementation for one backed by **NextAuth's Azure AD provider** (matching
 or calls `requireRole()` stays unchanged. `lib/config.ts`'s `authProvider`
 flag (`"simulated"` today) exists for exactly this switch-over.
 
-## 7. Future improvements
+## 8. Future improvements
 
 Roadmap items intentionally out of scope for this build (also shown as
 placeholders in the Inventory/Reports pages):

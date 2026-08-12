@@ -1,0 +1,4 @@
+# Shell scripts run inside Linux containers (via a Windows bind-mount in the
+# dev compose flow) -- CRLF line endings would break `sh script.sh` with
+# `$'\r': command not found` on a Windows checkout with core.autocrlf=true.
+*.sh text eol=lf
